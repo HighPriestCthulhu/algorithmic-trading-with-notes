@@ -1,7 +1,5 @@
 # In[ ]:
-import sys
 import os
-
 from pathlib import Path
 
 from scipy.stats import pearson3
@@ -22,7 +20,6 @@ def monte_carlo(df, strategy, num_simulations=100):
     nums_better = 0
     for i in range(num_simulations):
         sim_returns = pearson3.rvs(*param[:-2], loc=param[-2], scale=param[-1], size=len(returns))
-        print(i)
         sim_mean = np.mean(sim_returns)
 
         df = pd.DataFrame(np.cumprod(1 + sim_returns), columns=["Close"])
