@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def generalized_hurst(ts, q_vals=np.linspace(0.5, 5, 20), max_lag=300, preview=True): #qvals: start at 0.5, twenty values 2 5. This measures the nth moment
+def generalized_hurst(ts, q_vals=np.linspace(0.5, 5, 20), max_lag=10, preview=True): #qvals: start at 0.5, twenty values 2 5. This measures the nth moment
     # print(type(ts))
     # ts = np.array(ts) #ts= timeseries data, 
     # if preview:
@@ -16,6 +16,7 @@ def generalized_hurst(ts, q_vals=np.linspace(0.5, 5, 20), max_lag=300, preview=T
         moments = []
         for lag in lags:
             diffs = np.abs(ts[lag:] - ts[:-lag])
+          
             moment = np.mean(diffs**(2*q))
             moments.append(moment)
 
@@ -29,7 +30,13 @@ def generalized_hurst(ts, q_vals=np.linspace(0.5, 5, 20), max_lag=300, preview=T
 # Download USD/CAD exchange rate (CAD=X)
 data = yf.download("CAD=X", start="2018-01-01", end="2024-12-31")
 log_prices = np.log(data['Close'].dropna().values)
-
+print(log_prices)
+plt.figure(figsize=(8,5))
+plt.plot(log_prices, marker='o', color='purple')
+plt.show
+# plt.title("Multifractal Spectrum H(q) vs q for USD/CAD")
+# plt.xlabel("q")
+# plt.ylabel("H(q)")
 # Compute and plot spectrum
 q_vals, H_q_vals = generalized_hurst(log_prices)
 
