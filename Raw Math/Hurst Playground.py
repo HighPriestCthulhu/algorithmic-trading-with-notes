@@ -3,12 +3,13 @@ import numpy as np
 import yfinance as yf
 import matplotlib.pyplot as plt
 import pandas as pd
-from IPython.display import display, Math
+from IPython.display import display, Math, Markdown
 
 plt.ion
 print("imports ok")
 #%%
-def generalized_hurst(data,q_vals=np.linspace(0.5, 5, 10), max_lag=10, preview=True, walkthrough=False): #qvals: start at 0.5, twenty values 2 5. This measures the nth moment
+#Note: hurst takes the moments of the  increments as it's arguments, not the moments of the data. 
+def generalized_hurst(data,q_vals=np.linspace(0.5, 5, 10), max_lag=1000, preview=True, walkthrough=False): #qvals: start at 0.5, twenty values 2 5. This measures the nth moment
     # print(type(ts))
     # ts = np.array(ts) #ts= timeseries data, 
     # if preview:
@@ -16,49 +17,79 @@ def generalized_hurst(data,q_vals=np.linspace(0.5, 5, 10), max_lag=10, preview=T
     close_data=pd.DataFrame(data['Close'].dropna().values)
     log_data = np.log(close_data)
     if walkthrough:
+        print("broad overview of data:")
         log_data.compare_to.summary(close_data, name1="log", name2="raw data")
+        rightingnum=(close_data[0]-log_data[0])[0]
+        print("data must be converted to log")
+        plt.figure(figsize=(8,5))
+        plt.plot(close_data, color='purple', label="OG Data")
+        plt.plot(log_data+rightingnum, color='blue', label='Log-Transformed')
+        plt.legend()
+        plt.title("Log Vs Raw Data, with log data origin corrected")
+        plt.show()
+        #EXPLAIN HURST
+        display(Markdown(r"""
+In a multifractal system, the scaling relationship is:
 
+$\mathbb{E} \left[ \left| X(t + \tau) - X(t) \right|^{2q} \right] \sim \tau^{2qH(q)}$
+"""))
+        #EXPLAIN LINEARISING
+        display(Markdown(r"""
+
+$\log \left( \mathbb{E} \left[ \left| X(t + \tau) - X(t) \right|^{2q} \right] \right) \sim \log(C) + 2qH(q) \log(\tau)$
+
+This yields a straight-line relationship of the form:
+
+$y = a + b \cdot x$
+
+Where:
+- \tau = some lag between numbers
+- $y = \log \left( \mathbb{E}[|X(t+\tau) - X(t)|^{2q}] \right)$  
+- $x = \log(\tau)$  
+- $\text{slope} = 2qH(q)$
+                         """))
+
+    
     close_data=np.array(close_data)
     log_data=np.array(log_data)
+    if walkthrough:
+        print("mean price:", np.mean(close_data))
+        print("mean log‑price:", np.mean(log_data))
     lags = range(1, max_lag)
     H_q = []
-
     for q in q_vals:
         moments = []
+        running_diffs=[]
+        
         for lag in lags:
-            diffs = np.abs(log_data[lag:] - log_data[:-lag]) 
+            diffs = (log_data[lag:] - log_data[:-lag])
                 #elegant lag solution, 
                 #if [1,2,3,4]
                 ##t[1:]=[2,3,4]
                 ##t[:-1]=[1,2,3]
                 ##-> diffs= abs[2-1,2-3,3-4]
-          
-            moment = np.mean(diffs**(2*q))
+            moment = np.mean(np.abs(diffs)**(2*q))
             moments.append(moment)
+            running_diffs.append(diffs)
+        print("",q,"'th moment=",(moment))
 
-        log_lags = np.log(lags) #linearise X var
-        log_moments = np.log(moments) #linearise y var
+
+        log_lags = np.log(lags)
+        log_moments = np.log(moments)
         H, _ = np.polyfit(log_lags, log_moments, 1)
         H_q.append(H / (2 * q))
 
     return np.array(q_vals), np.array(H_q)
+
 # %%
 # Download USD/CAD exchange rate (CAD=X)
-data = yf.download("AUD=X", start="2018-01-01", end="2024-01-31")
-
-plt.figure(figsize=(8,5))
-plt.plot(data, marker='o', color='purple', )
-plt.show()
-# plt.title("Multifractal Spectrum H(q) vs q for USD/CAD")
-# plt.xlabel("q")
-# plt.ylabel("H(q)")
-# Compute and plot spectrum
+data = yf.download("EUR=X", start="2018-01-01", end="2025-04-15")
 #%%
 q_vals, H_q_vals = generalized_hurst(data, walkthrough=True)
 
 plt.figure(figsize=(8, 5))
-plt.plot(q_vals, H_q_vals, marker='o', color='purple')
-plt.title("Multifractal Spectrum H(q) vs q for USD/AUD")
+plt.plot(q_vals, H_q_vals, color='purple', marker='x')
+plt.title("Multifractal Spectrum H(q) vs q")
 plt.xlabel("moment")
 plt.ylabel("H(q)")
 plt.grid(True)
